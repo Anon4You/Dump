@@ -1,0 +1,118 @@
+#!/bin/sh
+
+printed="no"
+
+motd_is_disabled() {
+    local motd_key=${1:-all}
+    # Disabled by user
+    if [ -e ~/.akrishn ]; then
+        return 0
+    fi
+    if [ -e ~/.local/share/kali-motd/disable-${motd_key} ]; then
+        return 0
+    fi
+    # Disabled by admin
+    if [ -e /etc/kali-motd/disable-${motd_key} ]; then
+        return 0
+    fi
+    return 1
+}
+
+print_head() {
+    if [ "$printed" = "yes" ]; then
+        return
+    fi
+    printf '┏━(\033[1;32mMessage from Kali developers\033[00m)\n'
+    printf '┃\n'
+    printed="yes"
+}
+
+print_tail() {
+    if [ "$printed" = "no" ]; then
+        return
+    fi
+    printf '┗━(\033[2;37mRun: “touch ~/.akrishn” to hide this message\033[0m)\n'
+}
+
+# Message to show if using cloud kernel
+print_cloud() {
+    if motd_is_disabled cloud-warning; then
+        return
+    fi
+    print_head
+    cat <<END
+┃ This is a cloud installation of Kali Linux. Learn more about
+┃ the specificities of the various cloud images:
+┃ ⇒ https://www.kali.org/docs/troubleshooting/common-cloud-setup/
+┃
+END
+}
+
+# Message to show if missing (default) metapackage
+print_minimal() {
+    if motd_is_disabled minimal-warning; then
+        return
+    fi
+    print_head
+    cat <<END
+┃ This is a minimal installation of Kali Linux, you likely
+┃ want to install supplementary tools. Learn how:
+┃ ⇒ https://www.kali.org/docs/troubleshooting/common-minimum-setup/
+┃
+┃ From Alienkrishn termux repo:
+┃ ⇒ https://anon4you.github.io/alienkrishn/
+┃
+END
+}
+
+print_old_python() {
+    if motd_is_disabled old-python-warning; then
+        return
+    fi
+    print_head
+    cat <<END
+┃ We have kept /usr/bin/python pointing to Python 2 for backwards
+┃ compatibility. Learn how to change this and avoid this message:
+┃ ⇒ https://www.kali.org/docs/general-use/python3-transition/
+┃
+END
+}
+
+python_is_python2() {
+    if [ -h /usr/bin/python ]; then
+        target=$(readlink /usr/bin/python)
+        if [ "$target" = "python2" ]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Check to see if one of the listed package is installed
+pkg_is_installed() {
+    dpkg-query -f '${db:Status-Status}\n' -W "$@" 2>&1 | grep -q ^installed
+}
+
+# Stop if not running interactively (i.e. stdin is closed)
+if ! [ -t 0 ]; then
+    exit 0
+fi
+
+# Stop if it's disabled globally
+if motd_is_disabled; then
+    exit 0
+fi
+
+if ! pkg_is_installed kali-linux-headless 'kali-tools-*'; then
+    print_minimal
+fi
+
+if uname -r | grep -q cloud; then
+    print_cloud
+fi
+
+if python_is_python2; then
+    print_old_python
+fi
+
+print_tail
