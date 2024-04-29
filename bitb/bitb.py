@@ -1,7 +1,8 @@
-import os
+import os,sys
 import re
 import time
 from termcolor import colored as cl
+os.system("clear")
 banner="""                                                                        
     ,           ,
    /             \\
@@ -14,7 +15,7 @@ banner="""
          "-"   Author : @surya-dev-singh
                Maintainer : Alienkrishn
 
-\33[0mA script for browser in the browser attack"""
+\33[0mA script to perform browser in the browser attack"""
 print(cl(banner,"green"))
 print(" ")
 def open_server(path,title,webname):
